@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../utils/global-error-handler";
@@ -14,9 +14,6 @@ export const validation = (schema: schemaType) => {
       if (!schema[key]) continue;
       const result = await schema[key].safeParseAsync(req[key]);
       if (!result.success) {
-        console.log(result.error);
-        console.log(result.error.issues);
-
         for (const error of result.error?.issues) {
           validationErrors.push({
             key,

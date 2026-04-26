@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import { resolve } from "node:path";
 import { config } from "dotenv";
@@ -19,10 +19,17 @@ export const EMAIL_USER: string = process.env.EMAIL_USER!;
 export const EMAIL_PASS: string = process.env.EMAIL_PASS!;
 export const OTP_EXPIRE: number = Number(process.env.OTP_EXPIRE);
 export const REDIS_URL: string = process.env.REDIS_URL!;
-export const JWT_ACCESS_SECRET_KEY: string = process.env.JWT_ACCESS_SECRET_KEY!;
+export const JWT_ACCESS_SECRET_KEY_USER: string =
+  process.env.JWT_ACCESS_SECRET_KEY_USER!;
+export const JWT_REFRESH_SECRET_KEY_USER: string =
+  process.env.JWT_REFRESH_SECRET_KEY_USER!;
+export const PREFIX_USER: string = process.env.PREFIX_USER!;
+export const JWT_ACCESS_SECRET_KEY_ADMIN: string =
+  process.env.JWT_ACCESS_SECRET_KEY_ADMIN!;
+export const JWT_REFRESH_SECRET_KEY_ADMIN: string =
+  process.env.JWT_REFRESH_SECRET_KEY_ADMIN!;
+export const PREFIX_ADMIN: string = process.env.PREFIX_ADMIN!;
 export const ACCESS_EXPIRES_IN: number = Number(process.env.ACCESS_EXPIRES_IN);
-export const JWT_REFRESH_SECRET_KEY: string =
-  process.env.JWT_REFRESH_SECRET_KEY!;
 export const REFRESH_EXPIRES_IN: SignOptions["expiresIn"] =
   (process.env.REFRESH_EXPIRES_IN as SignOptions["expiresIn"]) || "1y";
 export const CLIENT_ID: string = process.env.CLIENT_ID!;

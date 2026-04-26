@@ -1,6 +1,6 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
-export const emailEnum = {
-  confirmEmail: "confirmEmail",
-  forgetPassword: "forgetPassword",
-};
+export enum emailEnum {
+  confirmEmail = "confirmEmail",
+  forgetPassword = "forgetPassword",
+}

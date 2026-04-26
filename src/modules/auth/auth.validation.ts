@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import * as z from "zod";
 import { GenderEnum } from "../../common/enum/user.enum";
@@ -60,7 +60,6 @@ export const signUpSchema = {
       { message: "passwords don't match", path: ["confirmPassword"] },
     ),
 };
-
 export type ISignUpType = z.infer<typeof signUpSchema.body>;
 
 export const signInSchema = {
@@ -73,6 +72,7 @@ export const signInSchema = {
     }),
   }),
 };
+export type ISignInType = z.infer<typeof signInSchema.body>;
 
 export const confirmEmailSchema = {
   body: z.object({
@@ -84,6 +84,7 @@ export const confirmEmailSchema = {
     }),
   }),
 };
+export type IConfirmEmailType = z.infer<typeof confirmEmailSchema.body>;
 
 export const resendOTPSchema = {
   body: z.object({
@@ -92,3 +93,53 @@ export const resendOTPSchema = {
       .email({ message: "invalid email format" }),
   }),
 };
+export type IResendOTPType = z.infer<typeof resendOTPSchema.body>;
+
+export const signUpAndSignInWithGmailSchema = {
+  body: z.object({
+    idToken: z
+      .string({ message: "idToken is required" })
+      .min(10, { message: "invalid idToken" }),
+  }),
+};
+export type ISignUpAndSignInWithGmailType = z.infer<
+  typeof signUpAndSignInWithGmailSchema.body
+>;
+
+export const forgotPasswordSchema = {
+  body: z.object({
+    email: z
+      .string({ message: "email is required" })
+      .email({ message: "invalid email format" }),
+  }),
+};
+export type IForgotPasswordType = z.infer<typeof forgotPasswordSchema.body>;
+
+export const resetPasswordSchema = {
+  body: z
+    .object({
+      code: z.string({ message: "code is required" }).length(6, {
+        message: "code length must be 6 digits",
+      }),
+      email: z
+        .string({ message: "email is required" })
+        .email({ message: "invalid email format" }),
+      newPassword: z.string({ message: "new password is required" }).min(6, {
+        message:
+          "new password length must be greater than or equal 6 characters",
+      }),
+      confirmPassword: z
+        .string({ message: "confirmPassword is required" })
+        .min(6, {
+          message:
+            "confirmPassword length must be greater than or equal 6 characters",
+        }),
+    })
+    .refine(
+      (data) => {
+        return data.newPassword === data.confirmPassword;
+      },
+      { message: "passwords don't match", path: ["confirmPassword"] },
+    ),
+};
+export type IResetPasswordType = z.infer<typeof resetPasswordSchema.body>;

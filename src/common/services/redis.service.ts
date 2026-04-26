@@ -1,13 +1,29 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
-import { RedisClientType } from "redis";
-import { redisClient } from "./redis.db";
-import { APPError } from "../../common/utils/global-error-handler";
+import { createClient, RedisClientType } from "redis";
+import { REDIS_URL } from "../../config/config.service";
+import { APPError } from "../utils/global-error-handler";
+import { Types } from "mongoose";
+import { OTPKeyEnum } from "../enum/otpKey.enum";
 
 class RedisService {
-  private _redisClient: RedisClientType;
+  private readonly client: RedisClientType;
   constructor() {
-    this._redisClient = redisClient;
+    this.client = createClient({
+      url: REDIS_URL,
+    });
+    this.handleEvents();
+  }
+
+  handleEvents() {
+    this.client.on("error", (error) => {
+      console.log("failed to connect to redis", error);
+    });
+  }
+
+  async connect() {
+    await this.client.connect();
+    console.log("connected to redis successfully");
   }
 
   async set({
@@ -18,12 +34,12 @@ class RedisService {
     key: string;
     value: string | number | boolean | object;
     ttl?: number;
-  }): Promise<"OK" | null> {
+  }): Promise<string | null> {
     try {
       const data = typeof value === "string" ? value : JSON.stringify(value);
       return ttl
-        ? await this._redisClient.set(key, data, { EX: ttl })
-        : await this._redisClient.set(key, data);
+        ? await this.client.set(key, data, { EX: ttl })
+        : await this.client.set(key, data);
     } catch (error) {
       console.log("error to set data in redis", error);
       throw new APPError("error to set data in redis");
@@ -52,9 +68,9 @@ class RedisService {
   async get(key: string): Promise<string | null> {
     try {
       try {
-        return JSON.parse(await this._redisClient.get(key));
+        return JSON.parse((await this.client.get(key)) as string);
       } catch (error) {
-        return await this._redisClient.get(key);
+        return await this.client.get(key);
       }
     } catch (error) {
       console.log("error to get data from redis", error);
@@ -64,7 +80,7 @@ class RedisService {
 
   async exists(key: string): Promise<number> {
     try {
-      return await this._redisClient.exists(key);
+      return await this.client.exists(key);
     } catch (error) {
       console.log("error to check data exists in redis", error);
       throw new APPError("error to check data exists in redis");
@@ -73,28 +89,28 @@ class RedisService {
 
   async ttl(key: string): Promise<number> {
     try {
-      return await this._redisClient.ttl(key);
+      return await this.client.ttl(key);
     } catch (error) {
       console.log("error to get ttl from redis", error);
       throw new APPError("error to get ttl from redis");
     }
   }
 
-  async expire({ key, ttl }: { key: string; ttl: number }): Promise<boolean> {
+  async expire({ key, ttl }: { key: string; ttl: number }): Promise<number> {
     try {
-      return await this._redisClient.expire(key, ttl);
+      return await this.client.expire(key, ttl);
     } catch (error) {
       console.log("error to set expire in redis", error);
       throw new APPError("error to set expire in redis");
     }
   }
 
-  async deleteKey(key: string): Promise<number> {
+  async deleteKey(key: string[] | string): Promise<number> {
     try {
       if (!key.length) {
         return 0;
       }
-      return await this._redisClient.del(key);
+      return await this.client.del(key);
     } catch (error) {
       console.log("error to delete data from redis", error);
       throw new APPError("error to delete data from redis");
@@ -103,7 +119,7 @@ class RedisService {
 
   async keys(pattern: string): Promise<string[]> {
     try {
-      return await redisClient.keys(`${pattern}*`);
+      return await this.client.keys(`${pattern}*`);
     } catch (error) {
       console.log("error to get keys from redis", error);
       throw new APPError("error to get keys from redis");
@@ -112,44 +128,31 @@ class RedisService {
 
   async incr(key: string): Promise<number> {
     try {
-      return await redisClient.incr(key);
+      return await this.client.incr(key);
     } catch (error) {
       console.log("error to increment key in redis", error);
       throw new APPError("error to increment key in redis");
     }
   }
 
-  revokedKey({ userId, jti }: { userId: string; jti: string }): string {
+  revokedKey({ userId, jti }: { userId: Types.ObjectId; jti: string }): string {
     return `revokeToken::${userId}::${jti}`;
   }
 
-  getKey(userId: string): string {
+  getKey(userId: Types.ObjectId): string {
     return `revokeToken::${userId}::`;
   }
 
-  getProfileKey(userId: string): string {
-    return `profile::${userId}`;
+  otpKey({ email, type }: { email: string; type: OTPKeyEnum }): string {
+    return `otp:${email}::${type}`;
   }
 
-  otpKey(email: string): string {
-    return `otp:${email}`;
+  maxOtpKey({ email, type }: { email: string; type: OTPKeyEnum }): string {
+    return `otp:${email}::${type}::max-tries`;
   }
 
-  maxOtpKey(email: string): string {
-    return `otp:${email}::max-tries`;
-  }
-
-  blockOtpKey(email: string): string {
-    return `otp:${email}::block`;
-  }
-
-  banKey(email: string): string {
-    return `ban::${email}`;
-  }
-
-  maxPasswordTries(email: string): string {
-    return `max-password-tries::${email}`;
+  blockOtpKey({ email, type }: { email: string; type: OTPKeyEnum }): string {
+    return `otp:${email}::${type}::block`;
   }
 }
-
 export default new RedisService();

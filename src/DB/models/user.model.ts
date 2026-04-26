@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import {
   GenderEnum,
@@ -12,16 +12,17 @@ export interface IUser {
   lastName: string;
   userName?: string;
   email: string;
-  password: string;
-  age: number;
+  password?: string;
+  age?: number;
   phone?: string;
   address?: string;
   gender?: GenderEnum;
   role?: RoleEnum;
   confirmed?: Boolean;
   provider?: ProviderEnum;
-  createdAt: Date;
-  updatedAt: Date;
+  changeCredential?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -48,14 +49,18 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
+      required: function (): boolean {
+        return this.provider == ProviderEnum.google ? false : true;
+      },
       trim: true,
       min: 3,
       max: 25,
     },
     age: {
       type: Number,
-      required: true,
+      required: function (): boolean {
+        return this.provider == ProviderEnum.google ? false : true;
+      },
       trim: true,
       min: 18,
       max: 60,
@@ -71,7 +76,6 @@ const userSchema = new mongoose.Schema<IUser>(
     gender: {
       type: String,
       enum: GenderEnum,
-      default: GenderEnum.male,
     },
     role: {
       type: String,
@@ -84,6 +88,7 @@ const userSchema = new mongoose.Schema<IUser>(
       enum: ProviderEnum,
       default: ProviderEnum.system,
     },
+    changeCredential: Date,
   },
   {
     timestamps: true,

@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import mongoose from "mongoose";
 import { DB_URI } from "../config/config.service";

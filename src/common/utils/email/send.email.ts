@@ -1,4 +1,4 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
 import nodemailer from "nodemailer";
 import { EMAIL_PASS, EMAIL_USER } from "../../../config/config.service.js";

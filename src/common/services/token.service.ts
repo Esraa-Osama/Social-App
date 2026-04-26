@@ -1,27 +1,38 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
-import jwt, { JwtPayload, SignOptions, VerifyOptions } from "jsonwebtoken";
+import jwt, {
+  JwtPayload,
+  Secret,
+  SignOptions,
+  VerifyOptions,
+} from "jsonwebtoken";
 
-export const generateToken = ({
-  payload,
-  secret_key,
-  options,
-}: {
-  payload: string | object | Buffer;
-  secret_key: string;
-  options?: SignOptions;
-}): string => {
-  return jwt.sign(payload, secret_key, options);
-};
+class TokenService {
+  constructor() {}
 
-export const verifyToken = ({
-  token,
-  secret_key,
-  options,
-}: {
-  token: string;
-  secret_key: string;
-  options?: VerifyOptions;
-}): string | JwtPayload => {
-  return jwt.verify(token, secret_key, options);
-};
+  generateToken = ({
+    payload,
+    secret_key,
+    options,
+  }: {
+    payload: object;
+    secret_key: Secret;
+    options?: SignOptions;
+  }): string => {
+    return jwt.sign(payload, secret_key, options);
+  };
+
+  verifyToken = ({
+    token,
+    secret_key,
+    options,
+  }: {
+    token: string;
+    secret_key: Secret;
+    options?: VerifyOptions;
+  }): JwtPayload => {
+    return jwt.verify(token, secret_key, options) as JwtPayload;
+  };
+}
+
+export default new TokenService();

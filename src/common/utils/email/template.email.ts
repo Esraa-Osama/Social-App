@@ -1,6 +1,14 @@
-//~ Assignment 15 ~//
+//~ Assignment 16 ~//
 
-export const emailTemplate = (otp: string) => {
+import { OTPKeyEnum, otpTemplateEnum } from "./../../enum/otpKey.enum";
+
+export const emailTemplate = ({
+  otp,
+  type,
+}: {
+  otp: string;
+  type: OTPKeyEnum;
+}) => {
   return `<!doctype html>
 <html>
   <head>
@@ -55,7 +63,7 @@ export const emailTemplate = (otp: string) => {
                 align="center"
                 style="color: #555; font-size: 14px; line-height: 1.6"
               >
-                Use the OTP below to complete your verification process
+                Use the OTP below to ${type == OTPKeyEnum.signUp ? otpTemplateEnum.signUp : otpTemplateEnum.resetPassword}
                 <br /><br />
                 This code will expire in <strong>2 minutes</strong>.
               </td>
