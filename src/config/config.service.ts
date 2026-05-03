@@ -1,4 +1,4 @@
-//~ Assignment 16 ~//
+//~ Assignment 17 ~//
 
 import { resolve } from "node:path";
 import { config } from "dotenv";
@@ -36,3 +36,7 @@ export const CLIENT_ID: string = process.env.CLIENT_ID!;
 export const CLOUD_NAME: string = process.env.CLOUD_NAME!;
 export const API_KEY: string = process.env.API_KEY!;
 export const API_SECRET: string = process.env.API_SECRET!;
+export const AWS_REGION: string = process.env.AWS_REGION!;
+export const AWS_BUCKET_NAME: string = process.env.AWS_BUCKET_NAME!;
+export const AWS_ACCESS_KEY: string = process.env.AWS_ACCESS_KEY!;
+export const AWS_SECRET_ACCESS_KEY: string = process.env.AWS_SECRET_ACCESS_KEY!;

@@ -1,4 +1,4 @@
-//~ Assignment 16 ~//
+//~ Assignment 17 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { Types } from "mongoose";
@@ -6,9 +6,12 @@ import UserRepository from "../../DB/repositories/user.repository";
 import { applyHash, compareHash } from "../../common/security/hash.security";
 import { IUpdatePasswordType } from "./user.validation";
 import { successResponse } from "../../common/utils/response.success";
+import { S3Service } from "../../common/services/s3.service";
 
 class UserService {
   private readonly _userModel = new UserRepository();
+  private readonly _s3Service = new S3Service();
+
   constructor() {}
 
   updatePassword = async (req: Request, res: Response, next: NextFunction) => {
@@ -40,6 +43,51 @@ class UserService {
     successResponse({
       res,
       data: { user: req.user },
+    });
+  };
+
+  updateProfilePicture = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const key = await this._s3Service.uploadFile({
+      file: req.file!,
+      path: "users",
+    });
+    successResponse({
+      res,
+      data: key,
+    });
+  };
+
+  updateBigProfilePicture = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const key = await this._s3Service.uploadLargeFile({
+      file: req.file!,
+      path: "users/large",
+    });
+    successResponse({
+      res,
+      data: key,
+    });
+  };
+
+  updateCoverPictures = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const urls = await this._s3Service.uploadFiles({
+      files: req.files as Express.Multer.File[],
+      path: "user/covers",
+    });
+    successResponse({
+      res,
+      data: urls,
     });
   };
 }
