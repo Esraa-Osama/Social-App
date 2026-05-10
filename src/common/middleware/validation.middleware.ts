@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../utils/global-error-handler";
@@ -12,6 +12,15 @@ export const validation = (schema: schemaType) => {
     let validationErrors = [];
     for (const key of Object.keys(schema) as reqType[]) {
       if (!schema[key]) continue;
+
+      if (req?.file) {
+        req.body.attachment = req.file;
+      }
+
+      if (req?.files) {
+        req.body.attachments = req.files;
+      }
+
       const result = await schema[key].safeParseAsync(req[key]);
       if (!result.success) {
         for (const error of result.error?.issues) {

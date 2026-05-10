@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import { resolve } from "node:path";
 import { config } from "dotenv";
@@ -11,6 +11,7 @@ config({ path: resolve(__dirname, `../../.env.${NODE_ENV}`) });
 export const PORT: number = Number(process.env.PORT) || 8000;
 export const ORIGINS: string[] | [] = process.env.ORIGINS?.split(",") || [];
 export const DB_URI: string = process.env.DB_URI!;
+export const DB_URI_ONLINE: string = process.env.DB_URI_ONLINE!;
 export const SALT_ROUNDS: number = Number(process.env.SALT_ROUNDS);
 export const SYMMETRIC_ENCRYPTION_KEY: string =
   process.env.SYMMETRIC_ENCRYPTION_KEY!;
@@ -40,3 +41,6 @@ export const AWS_REGION: string = process.env.AWS_REGION!;
 export const AWS_BUCKET_NAME: string = process.env.AWS_BUCKET_NAME!;
 export const AWS_ACCESS_KEY: string = process.env.AWS_ACCESS_KEY!;
 export const AWS_SECRET_ACCESS_KEY: string = process.env.AWS_SECRET_ACCESS_KEY!;
+export const SIGNED_URL_EXPIRES_IN: number = Number(
+  process.env.SIGNED_URL_EXPIRES_IN,
+);

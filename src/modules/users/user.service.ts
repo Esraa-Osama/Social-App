@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { Types } from "mongoose";
@@ -7,6 +7,7 @@ import { applyHash, compareHash } from "../../common/security/hash.security";
 import { IUpdatePasswordType } from "./user.validation";
 import { successResponse } from "../../common/utils/response.success";
 import { S3Service } from "../../common/services/s3.service";
+import { pipeline } from "node:stream/promises";
 
 class UserService {
   private readonly _userModel = new UserRepository();
@@ -89,6 +90,94 @@ class UserService {
       res,
       data: urls,
     });
+  };
+
+  upload = async (req: Request, res: Response, next: NextFunction) => {
+    const { fileName, ContentType } = req.body;
+    const { url, Key } = await this._s3Service.createPreSignedUrl({
+      path: `users/${req.user?._id}`,
+      fileName,
+      ContentType,
+    });
+
+    await this._userModel.findOneAndUpdate({
+      filter: { _id: req.user?._id },
+      updates: { profilePicture: Key },
+    });
+
+    successResponse({
+      res,
+      data: { Key, url },
+    });
+  };
+
+  getAndDownloadProfilePicture = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { path } = req.params as { path: string[] };
+    const { download } = req.query;
+
+    const Key = path.join("/");
+    const result = await this._s3Service.getFile(Key);
+    const stream = result.Body as NodeJS.ReadableStream;
+    res.setHeader("Content-Type", result.ContentType!);
+    if (download && download === "true") {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${path.pop()}"`,
+      );
+    }
+    await pipeline(stream, res);
+  };
+
+  getProfilePicture = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { path } = req.params as { path: string[] };
+    const { download } = req.query as { download: string };
+    const Key = path.join("/");
+    const url = await this._s3Service.getPreSignedUrl({
+      Key,
+      download: download ? download : undefined,
+    });
+    successResponse({ res, data: url });
+  };
+
+  getFiles = async (req: Request, res: Response, next: NextFunction) => {
+    const { path } = req.query as { path: string };
+    const { Contents } = await this._s3Service.getFiles(path);
+
+    const urls = [];
+    for (const content of Contents!) {
+      urls.push({ Key: content.Key });
+    }
+    successResponse({ res, data: urls });
+  };
+
+  deleteFile = async (req: Request, res: Response, next: NextFunction) => {
+    const { Key } = req.query as { Key: string };
+    const result = await this._s3Service.deleteFile(Key);
+
+    successResponse({ res, data: result });
+  };
+
+  deleteFiles = async (req: Request, res: Response, next: NextFunction) => {
+    const { Keys } = req.body as { Keys: string[] };
+    const result = await this._s3Service.deleteFiles(Keys);
+
+    successResponse({ res, data: result });
+  };
+
+  deleteFolder = async (req: Request, res: Response, next: NextFunction) => {
+    const { folderName } = req.query as { folderName: string };
+    const result = await this._s3Service.deleteFolder(folderName);
+
+    successResponse({ res, data: result });
   };
 }
 

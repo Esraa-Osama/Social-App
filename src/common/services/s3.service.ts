@@ -1,7 +1,11 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import { StorageEnum } from "./../enum/multer.enum";
 import {
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client,
@@ -11,11 +15,13 @@ import {
   AWS_BUCKET_NAME,
   AWS_REGION,
   AWS_SECRET_ACCESS_KEY,
+  SIGNED_URL_EXPIRES_IN,
 } from "../../config/config.service";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { APPError } from "../utils/global-error-handler";
 import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export class S3Service {
   private client: S3Client;
@@ -123,5 +129,94 @@ export class S3Service {
       );
     }
     return urls;
+  }
+
+  async createPreSignedUrl({
+    path = "General",
+    fileName,
+    ContentType,
+    expiresIn = SIGNED_URL_EXPIRES_IN,
+  }: {
+    path?: string;
+    fileName: string;
+    ContentType: string;
+    expiresIn?: number;
+  }) {
+    const Key = `social_media_app/${path}/${randomUUID()}__${fileName}`;
+    const command = new PutObjectCommand({
+      Bucket: AWS_BUCKET_NAME,
+      Key,
+      ContentType,
+    });
+
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    return { url, Key };
+  }
+
+  async getFile(Key: string) {
+    const command = new GetObjectCommand({
+      Bucket: AWS_BUCKET_NAME,
+      Key,
+    });
+    return this.client.send(command);
+  }
+
+  async getPreSignedUrl({
+    Key,
+    expiresIn = SIGNED_URL_EXPIRES_IN,
+    download,
+  }: {
+    Key: string;
+    expiresIn?: number;
+    download?: string | undefined;
+  }) {
+    const command = new GetObjectCommand({
+      Bucket: AWS_BUCKET_NAME,
+      Key,
+      ResponseContentDisposition: download
+        ? `attachment; filename="${Key.split("/").pop()}"`
+        : undefined,
+    });
+
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    return url;
+  }
+
+  async getFiles(folderName: string) {
+    const command = new ListObjectsV2Command({
+      Bucket: AWS_BUCKET_NAME,
+      Prefix: `social_media_app/${folderName}`,
+    });
+    return this.client.send(command);
+  }
+
+  async deleteFile(Key: string) {
+    const command = new DeleteObjectCommand({
+      Bucket: AWS_BUCKET_NAME,
+      Key,
+    });
+    return this.client.send(command);
+  }
+
+  async deleteFiles(Keys: string[]) {
+    const keyMapping = Keys.map((k) => {
+      return { Key: k };
+    });
+    const command = new DeleteObjectsCommand({
+      Bucket: AWS_BUCKET_NAME,
+      Delete: {
+        Objects: keyMapping,
+      },
+    });
+    return this.client.send(command);
+  }
+
+  async deleteFolder(folderName: string) {
+    const data = await this.getFiles(folderName);
+
+    const keyMapping = data.Contents!.map((c) => {
+      return c.Key;
+    });
+    return await this.deleteFiles(keyMapping as string[]);
   }
 }

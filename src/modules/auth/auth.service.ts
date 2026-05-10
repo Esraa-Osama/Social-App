@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../../common/utils/global-error-handler";
@@ -38,11 +38,13 @@ import { LoginTicket, OAuth2Client, TokenPayload } from "google-auth-library";
 import { OTPKeyEnum, subjectEnum } from "../../common/enum/otpKey.enum";
 import { JwtPayload } from "jsonwebtoken";
 import { successResponse } from "../../common/utils/response.success";
+import notificationService from "../../common/services/notification.service";
 
 class AuthService {
   private readonly _userModel = new UserRepository();
   private readonly _redisService = redisService;
   private readonly _tokenService = tokenService;
+  private readonly _notificationService = notificationService;
   constructor() {}
 
   sendEmailOtp = async ({
@@ -156,16 +158,16 @@ class AuthService {
   };
 
   signin = async (req: Request, res: Response, next: NextFunction) => {
-    const { email, password }: ISignInType = req.body;
+    const { email, password, fcm }: ISignInType = req.body;
 
     const user = await this._userModel.checkUserNotExists({
       email,
       provider: ProviderEnum.system,
     });
 
-    // if (!user.confirmed) {
-    //   throw new APPError("please verify your email first", 403);
-    // }
+    if (!user.confirmed) {
+      throw new APPError("please verify your email first", 403);
+    }
 
     if (!compareHash({ plainText: password, hashedText: user.password! })) {
       throw new APPError("incorrect password", 404);
@@ -193,6 +195,18 @@ class AuthService {
         jwtid,
       },
     });
+
+    if (fcm) {
+      await this._redisService.addFCM({ userId: user._id, FCMToken: fcm });
+      const tokens = await this._redisService.getFCMs(user._id);
+      await this._notificationService.sendNotifications({
+        tokens,
+        data: {
+          title: `hi ${user.firstName}`,
+          body: `new login at ${new Date()}`,
+        },
+      });
+    }
 
     successResponse({
       res,

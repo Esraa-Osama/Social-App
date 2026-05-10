@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import {
   GenderEnum,
@@ -16,6 +16,7 @@ export interface IUser {
   age?: number;
   phone?: string;
   address?: string;
+  profilePicture?: string;
   gender?: GenderEnum;
   role?: RoleEnum;
   confirmed?: Boolean;
@@ -73,6 +74,8 @@ const userSchema = new mongoose.Schema<IUser>(
       type: String,
       trim: true,
     },
+    profilePicture: String,
+
     gender: {
       type: String,
       enum: GenderEnum,

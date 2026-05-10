@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import * as z from "zod";
 import { GenderEnum } from "../../common/enum/user.enum";
@@ -70,6 +70,7 @@ export const signInSchema = {
     password: z.string({ message: "password is required" }).min(6, {
       message: "password length must be greater than or equal 6 characters",
     }),
+    fcm: z.string(),
   }),
 };
 export type ISignInType = z.infer<typeof signInSchema.body>;

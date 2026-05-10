@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import { Router } from "express";
 import userService from "./user.service";
@@ -39,5 +39,27 @@ userRouter.patch(
   multerCloud().array("coverPictures"),
   userService.updateCoverPictures,
 );
+
+userRouter.post("/upload-profile-picture", authentication, userService.upload);
+
+userRouter.get(
+  "/get-and-download-profile-picture-pre-signed/*path",
+  authentication,
+  userService.getProfilePicture,
+);
+
+userRouter.get(
+  "/get-and-download-profile-picture/*path",
+  authentication,
+  userService.getAndDownloadProfilePicture,
+);
+
+userRouter.get("/get-files", authentication, userService.getFiles);
+
+userRouter.delete("/delete-file", authentication, userService.deleteFile);
+
+userRouter.delete("/delete-files", authentication, userService.deleteFiles);
+
+userRouter.get("/delete-folder", authentication, userService.deleteFolder);
 
 export default userRouter;

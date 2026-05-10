@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import { createClient, RedisClientType } from "redis";
 import { REDIS_URL } from "../../config/config.service";
@@ -153,6 +153,42 @@ class RedisService {
 
   blockOtpKey({ email, type }: { email: string; type: OTPKeyEnum }): string {
     return `otp:${email}::${type}::block`;
+  }
+
+  key(userId: Types.ObjectId) {
+    return `user:FCM:${userId}`;
+  }
+
+  async addFCM({
+    userId,
+    FCMToken,
+  }: {
+    userId: Types.ObjectId;
+    FCMToken: string;
+  }) {
+    return await this.client.sAdd(this.key(userId), FCMToken);
+  }
+
+  async removeFCM({
+    userId,
+    FCMToken,
+  }: {
+    userId: Types.ObjectId;
+    FCMToken: string;
+  }) {
+    return await this.client.sRem(this.key(userId), FCMToken);
+  }
+
+  async getFCMs(userId: Types.ObjectId) {
+    return await this.client.sMembers(this.key(userId));
+  }
+
+  async hasFCMs(userId: Types.ObjectId) {
+    return await this.client.sCard(this.key(userId));
+  }
+
+  async removeFCMUser(userId: Types.ObjectId) {
+    return await this.client.del(this.key(userId));
   }
 }
 export default new RedisService();

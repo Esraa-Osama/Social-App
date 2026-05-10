@@ -1,4 +1,4 @@
-//~ Assignment 17 ~//
+//~ Assignment 18 ~//
 
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
@@ -15,6 +15,7 @@ import { checkCBConnection } from "./DB/dbConnection";
 import userRouter from "./modules/users/user.controller";
 import { successResponse } from "./common/utils/response.success";
 import redisService from "./common/services/redis.service";
+import postRouter from "./modules/posts/post.controller";
 
 const app: express.Application = express();
 const port: number = PORT;
@@ -59,6 +60,7 @@ const bootstrap = async () => {
 
   app.use("/auth", authRouter);
   app.use("/users", userRouter);
+  app.use("/posts", postRouter);
 
   app.use("{/*demo}", (req: Request, res: Response, next: NextFunction) => {
     throw new APPError(`404 page ${req.originalUrl} not found`, 404);
