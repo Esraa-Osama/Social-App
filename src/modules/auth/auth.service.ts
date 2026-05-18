@@ -1,4 +1,4 @@
-//~ Assignment 18 ~//
+//~ Assignment 19 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../../common/utils/global-error-handler";
@@ -165,9 +165,9 @@ class AuthService {
       provider: ProviderEnum.system,
     });
 
-    if (!user.confirmed) {
-      throw new APPError("please verify your email first", 403);
-    }
+    // if (!user.confirmed) {
+    //   throw new APPError("please verify your email first", 403);
+    // }
 
     if (!compareHash({ plainText: password, hashedText: user.password! })) {
       throw new APPError("incorrect password", 404);

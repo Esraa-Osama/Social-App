@@ -1,23 +1,19 @@
 //~ Assignment 19 ~//
 
 import mongoose, { HydratedDocument, Types } from "mongoose";
-import {
-  Allow_Comment_Enum,
-  Availability_Enum,
-} from "../../common/enum/post.enum";
 
-export interface IPost {
+export interface IComment {
   content?: string;
   attachments?: string[];
   createdBy: Types.ObjectId;
   tags?: Types.ObjectId[];
   likes?: Types.ObjectId[];
-  allowComment: Allow_Comment_Enum;
-  availability: Availability_Enum;
   folderId: string;
+  postId: Types.ObjectId;
+  commentId?: Types.ObjectId;
 }
 
-const postSchema = new mongoose.Schema<IPost>(
+const commentSchema = new mongoose.Schema<IComment>(
   {
     content: {
       type: String,
@@ -44,17 +40,17 @@ const postSchema = new mongoose.Schema<IPost>(
         ref: "user",
       },
     ],
-    allowComment: {
-      type: String,
-      enum: Allow_Comment_Enum,
-      default: Allow_Comment_Enum.allow,
-    },
-    availability: {
-      type: String,
-      enum: Availability_Enum,
-      default: Availability_Enum.public,
-    },
     folderId: String,
+    postId: {
+      type: Types.ObjectId,
+      ref: "post",
+      required: true,
+    },
+    commentId: {
+      type: Types.ObjectId,
+      ref: "comment",
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -65,13 +61,13 @@ const postSchema = new mongoose.Schema<IPost>(
   },
 );
 
-postSchema.virtual("comments", {
+commentSchema.virtual("replies", {
   ref: "comment",
   localField: "_id",
-  foreignField: "postId",
+  foreignField: "commentId",
 });
 
-const postModel =
-  mongoose.models.post || mongoose.model<IPost>("post", postSchema);
+const commentModel =
+  mongoose.models.comment || mongoose.model<IComment>("comment", commentSchema);
 
-export default postModel;
+export default commentModel;

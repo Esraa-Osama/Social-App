@@ -1,4 +1,4 @@
-//~ Assignment 18 ~//
+//~ Assignment 19 ~//
 
 export enum GenderEnum {
   male = "male",

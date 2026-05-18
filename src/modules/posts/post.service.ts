@@ -1,14 +1,18 @@
+//~ Assignment 19 ~//
+
 import type { Request, Response, NextFunction } from "express";
 import { successResponse } from "../../common/utils/response.success";
 import { S3Service } from "../../common/services/s3.service";
 import { APPError } from "../../common/utils/global-error-handler";
 import PostRepository from "../../DB/repositories/post.repository";
-import { ICreatePostType } from "./post.validation";
+import { ICreatePostType, IUpdatePostType } from "./post.validation";
 import UserRepository from "../../DB/repositories/user.repository";
 import { Types } from "mongoose";
 import notificationService from "../../common/services/notification.service";
 import redisService from "../../common/services/redis.service";
 import { randomUUID } from "node:crypto";
+import { Availability_Enum, Like_Post_Enum } from "../../common/enum/post.enum";
+import { postAvailability } from "../../common/utils/post.utils";
 
 class PostService {
   private readonly _postModel = new PostRepository();
@@ -55,7 +59,7 @@ class PostService {
       });
     }
     const post = await this._postModel.create({
-      content: content!,
+      content: content! || "",
       attachments: urls,
       createdBy: req.user?._id!,
       tags: mentions,
@@ -78,6 +82,157 @@ class PostService {
         },
       });
     }
+    successResponse({ res, data: post });
+  };
+
+  getPosts = async (req: Request, res: Response, next: NextFunction) => {
+    const posts = await this._postModel.paginate({
+      page: +req.query?.page!,
+      limit: +req.query?.limit!,
+      search: {
+        ...postAvailability(req),
+        ...(req.query?.search
+          ? {
+              content: { $regex: req.query?.search, $options: "i" },
+            }
+          : {}),
+      },
+      populate: {
+        path: "comments",
+        match: { commentId: { $exists: false } },
+        populate: { path: "replies" },
+      },
+    });
+
+    successResponse({ res, data: posts });
+  };
+
+  likeAndDislikePost = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { postId } = req.params;
+    const { flag } = req.query;
+
+    let updateQuery: any = { $addToSet: { likes: req.user?._id } };
+
+    if (flag && flag === Like_Post_Enum.disLike) {
+      updateQuery = { $pull: { likes: req.user?._id } };
+    }
+
+    const likeAndDislikePost = await this._postModel.findOneAndUpdate({
+      filter: {
+        _id: postId,
+        ...postAvailability(req),
+      },
+      updates: updateQuery,
+    });
+
+    if (!likeAndDislikePost) {
+      throw new APPError("post not found or not authorized");
+    }
+
+    successResponse({ res, data: likeAndDislikePost });
+  };
+
+  updatePost = async (req: Request, res: Response, next: NextFunction) => {
+    const { postId } = req.params;
+
+    const {
+      content,
+      attachments,
+      removeAttachments,
+      tags,
+      removeTags,
+      allowComment,
+      availability,
+    }: IUpdatePostType = req.body;
+
+    const post = await this._postModel.findOne({
+      filter: { _id: postId, createdBy: req.user?._id! },
+    });
+
+    if (!post) {
+      throw new APPError("post not found or not authorized");
+    }
+
+    if (removeAttachments?.length) {
+      const invalidFiles = removeAttachments.filter((file: string) => {
+        return !post.attachments?.includes(file);
+      });
+
+      if (invalidFiles.length) {
+        throw new APPError("some files you try to remove already don't exist");
+      }
+
+      await this._s3Service.deleteFiles(removeAttachments);
+      post.attachments = post.attachments?.filter((attachment: string) => {
+        return !removeAttachments.includes(attachment);
+      }) as string[];
+    }
+
+    const updateTags = new Set(
+      post?.tags?.map((tag) => {
+        return tag.toString();
+      }),
+    );
+
+    removeTags?.forEach((tag: string) => {
+      return updateTags.delete(tag);
+    });
+
+    let fcmTokens: string[] = [];
+    if (tags?.length) {
+      const mentionsTags = await this._userModel.find({
+        filter: { _id: { $in: tags } },
+      });
+
+      if (tags.length !== mentionsTags.length) {
+        throw new APPError("invalid tag id");
+      }
+
+      for (const tag of mentionsTags) {
+        updateTags.add(tag._id.toString());
+        (await this._redisService.getFCMs(tag._id)).map((token) => {
+          fcmTokens.push(token);
+        });
+      }
+      post.tags = [...updateTags].map((tag: string) => {
+        return new Types.ObjectId(tag);
+      });
+    }
+
+    if (req?.files) {
+      let urls: string[] = await this._s3Service.uploadFiles({
+        path: `users/${req.user?._id}/posts/${post.folderId}`,
+        files: req.files as Express.Multer.File[],
+      });
+      post.attachments?.push(...urls);
+    }
+
+    if (content) {
+      post.content = content;
+    }
+    if (allowComment) {
+      post.allowComment = allowComment;
+    }
+    if (availability) {
+      post.availability = availability;
+    }
+
+    await post.save();
+
+    if (fcmTokens.length > 0) {
+      await this._notificationService.sendNotifications({
+        tokens: fcmTokens,
+        data: {
+          title: `you are mentioned in ${req.user?.userName}'s post`,
+          body: content || "post updated",
+        },
+      });
+    }
+
     successResponse({ res, data: post });
   };
 }

@@ -1,11 +1,11 @@
-//~ Assignment 18 ~//
+//~ Assignment 19 ~//
 
 import {
   GenderEnum,
   RoleEnum,
   ProviderEnum,
 } from "./../../common/enum/user.enum";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 export interface IUser {
   firstName: string;
@@ -20,6 +20,7 @@ export interface IUser {
   gender?: GenderEnum;
   role?: RoleEnum;
   confirmed?: Boolean;
+  friends?: Types.ObjectId[];
   provider?: ProviderEnum;
   changeCredential?: Date;
   createdAt?: Date;
@@ -86,6 +87,12 @@ const userSchema = new mongoose.Schema<IUser>(
       default: RoleEnum.user,
     },
     confirmed: Boolean,
+    friends: [
+      {
+        type: Types.ObjectId,
+        ref: "user",
+      },
+    ],
     provider: {
       type: String,
       enum: ProviderEnum,
