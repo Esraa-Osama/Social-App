@@ -1,6 +1,7 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import mongoose, { HydratedDocument, Types } from "mongoose";
+import { On_Model_Enum } from "../../common/enum/post.enum";
 
 export interface IComment {
   content?: string;
@@ -9,8 +10,9 @@ export interface IComment {
   tags?: Types.ObjectId[];
   likes?: Types.ObjectId[];
   folderId: string;
-  postId: Types.ObjectId;
-  commentId?: Types.ObjectId;
+  refId: Types.ObjectId;
+  onModel: On_Model_Enum;
+  deletedAt?: Date;
 }
 
 const commentSchema = new mongoose.Schema<IComment>(
@@ -41,16 +43,18 @@ const commentSchema = new mongoose.Schema<IComment>(
       },
     ],
     folderId: String,
-    postId: {
+
+    refId: {
       type: Types.ObjectId,
-      ref: "post",
+      refPath: "onModel",
       required: true,
     },
-    commentId: {
-      type: Types.ObjectId,
-      ref: "comment",
+    onModel: {
+      type: String,
+      enum: On_Model_Enum,
       required: true,
     },
+    deletedAt: Date,
   },
   {
     timestamps: true,
@@ -64,7 +68,25 @@ const commentSchema = new mongoose.Schema<IComment>(
 commentSchema.virtual("replies", {
   ref: "comment",
   localField: "_id",
-  foreignField: "commentId",
+  foreignField: "refId",
+});
+
+commentSchema.pre(/^find/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
+});
+
+commentSchema.pre(/^findOneAnd/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
 });
 
 const commentModel =

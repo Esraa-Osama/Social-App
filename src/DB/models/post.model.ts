@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import mongoose, { HydratedDocument, Types } from "mongoose";
 import {
@@ -15,6 +15,7 @@ export interface IPost {
   allowComment: Allow_Comment_Enum;
   availability: Availability_Enum;
   folderId: string;
+  deletedAt?: Date;
 }
 
 const postSchema = new mongoose.Schema<IPost>(
@@ -55,6 +56,7 @@ const postSchema = new mongoose.Schema<IPost>(
       default: Availability_Enum.public,
     },
     folderId: String,
+    deletedAt: Date,
   },
   {
     timestamps: true,
@@ -68,7 +70,25 @@ const postSchema = new mongoose.Schema<IPost>(
 postSchema.virtual("comments", {
   ref: "comment",
   localField: "_id",
-  foreignField: "postId",
+  foreignField: "refId",
+});
+
+postSchema.pre(/^find/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
+});
+
+postSchema.pre(/^findOneAnd/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
 });
 
 const postModel =

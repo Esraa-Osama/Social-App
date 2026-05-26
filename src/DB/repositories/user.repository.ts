@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import BaseRepository from "./base.repository";
 import userModel, { IUser } from "../models/user.model";
@@ -11,7 +11,9 @@ class UserRepository extends BaseRepository<IUser> {
   }
 
   async checkUserExists(email: string) {
-    const userExists = await this.findOne({ filter: { email } });
+    const userExists = await this.findOne({
+      filter: { email, paranoid: true },
+    });
 
     if (userExists) {
       throw new APPError("user already exists", 409);
@@ -25,7 +27,9 @@ class UserRepository extends BaseRepository<IUser> {
     email: string;
     provider?: ProviderEnum;
   }) {
-    const user = await this.findOne({ filter: { email, provider: provider! } });
+    const user = await this.findOne({
+      filter: { email, provider: provider!, paranoid: true },
+    });
     if (!user) {
       throw new APPError("user not found", 404);
     }

@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
@@ -16,6 +16,8 @@ import userRouter from "./modules/users/user.controller";
 import { successResponse } from "./common/utils/response.success";
 import redisService from "./common/services/redis.service";
 import postRouter from "./modules/posts/post.controller";
+import { graphQLSchema } from "./modules/graphql/graphql.schema";
+import { createHandler } from "graphql-http/lib/use/express";
 
 const app: express.Application = express();
 const port: number = PORT;
@@ -57,6 +59,18 @@ const bootstrap = async () => {
       message: "WELCOME TO SOCIAL APP...",
     });
   });
+
+  app.use(
+    "/graphql",
+    createHandler({
+      schema: graphQLSchema,
+      context: (req) => {
+        {
+          req;
+        }
+      },
+    }),
+  );
 
   app.use("/auth", authRouter);
   app.use("/users", userRouter);

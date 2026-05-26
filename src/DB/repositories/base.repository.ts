@@ -1,5 +1,6 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
+import { HydrateOptions } from "mongoose";
 import {
   HydratedDocument,
   Model,
@@ -143,6 +144,18 @@ abstract class BaseRepository<TDocument> {
       },
       data,
     };
+  }
+
+  async updateMany({
+    filter,
+    updates,
+    options,
+  }: {
+    filter: QueryFilter<TDocument>;
+    updates: UpdateQuery<TDocument>;
+    options?: HydrateOptions;
+  }): Promise<any> {
+    return this._model.updateMany(filter, updates, options);
   }
 }
 

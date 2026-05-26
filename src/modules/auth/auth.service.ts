@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../../common/utils/global-error-handler";
@@ -12,7 +12,7 @@ import {
   ISignUpType,
 } from "./auth.validation";
 import { IUser } from "../../DB/models/user.model";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 import UserRepository from "../../DB/repositories/user.repository";
 import { applyHash, compareHash } from "../../common/security/hash.security";
 import { encrypt } from "../../common/security/encrypt.security";
@@ -36,7 +36,6 @@ import { event } from "../../common/utils/email/event.email";
 import { emailEnum } from "../../common/enum/email.enum";
 import { LoginTicket, OAuth2Client, TokenPayload } from "google-auth-library";
 import { OTPKeyEnum, subjectEnum } from "../../common/enum/otpKey.enum";
-import { JwtPayload } from "jsonwebtoken";
 import { successResponse } from "../../common/utils/response.success";
 import notificationService from "../../common/services/notification.service";
 
@@ -239,6 +238,7 @@ class AuthService {
         email,
         confirmed: { $exists: false },
         provider: ProviderEnum.system,
+        paranoid: true,
       },
       updates: { confirmed: true },
     });
@@ -268,6 +268,7 @@ class AuthService {
         email,
         confirmed: { $exists: false },
         provider: ProviderEnum.system,
+        paranoid: true,
       },
     });
     if (!user) {
@@ -304,7 +305,9 @@ class AuthService {
       throw new APPError("email is required", 400);
     }
 
-    let user = await this._userModel.findOne({ filter: { email } });
+    let user = await this._userModel.findOne({
+      filter: { email, paranoid: true },
+    });
     if (!user) {
       user = await this._userModel.create({
         userName: name!,
@@ -353,6 +356,7 @@ class AuthService {
         email,
         provider: ProviderEnum.system,
         confirmed: { $exists: true },
+        paranoid: true,
       },
     });
     if (!user) {
@@ -393,6 +397,7 @@ class AuthService {
         email,
         provider: ProviderEnum.system,
         confirmed: { $exists: true },
+        paranoid: true,
       },
       updates: {
         password: applyHash({ plainText: newPassword }),
@@ -438,6 +443,14 @@ class AuthService {
       res,
       message: "done",
     });
+  };
+
+  getUser = (userId: Types.ObjectId) => {
+    return this._userModel.findOne({ filter: { _id: userId } });
+  };
+
+  listUsers = async () => {
+    return await this._userModel.find({ filter: {} });
   };
 }
 

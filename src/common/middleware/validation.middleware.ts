@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { APPError } from "../utils/global-error-handler";
@@ -37,5 +37,26 @@ export const validation = (schema: schemaType) => {
       throw new APPError(validationErrors, 400);
     }
     next();
+  };
+};
+
+export const validationGQL = async (schema: ZodType, data: any) => {
+  return async () => {
+    let validationErrors = [];
+
+    const result = await schema.safeParseAsync(data);
+
+    if (!result.success) {
+      for (const element of result.error?.issues) {
+        validationErrors.push({
+          message: element.message,
+          path: element.path[0],
+        });
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      throw new APPError(validationErrors);
+    }
   };
 };

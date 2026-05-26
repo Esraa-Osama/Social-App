@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { successResponse } from "../../common/utils/response.success";
@@ -11,12 +11,14 @@ import { Types } from "mongoose";
 import notificationService from "../../common/services/notification.service";
 import redisService from "../../common/services/redis.service";
 import { randomUUID } from "node:crypto";
-import { Availability_Enum, Like_Post_Enum } from "../../common/enum/post.enum";
+import { Like_Post_Enum, On_Model_Enum } from "../../common/enum/post.enum";
 import { postAvailability } from "../../common/utils/post.utils";
+import CommentRepository from "../../DB/repositories/comment.repository";
 
 class PostService {
   private readonly _postModel = new PostRepository();
   private readonly _userModel = new UserRepository();
+  private readonly _commentModel = new CommentRepository();
   private readonly _s3Service = new S3Service();
   private readonly _redisService = redisService;
   private readonly _notificationService = notificationService;
@@ -35,7 +37,7 @@ class PostService {
     let fcmTokens: string[] = [];
     if (tags?.length) {
       const mentionsTags = await this._userModel.find({
-        filter: { _id: { $in: tags } },
+        filter: { _id: { $in: tags }, paranoid: true },
       });
 
       if (tags.length !== mentionsTags.length) {
@@ -82,6 +84,20 @@ class PostService {
         },
       });
     }
+    successResponse({ res, data: post });
+  };
+
+  getPost = async (req: Request, res: Response, next: NextFunction) => {
+    const { postId } = req.params;
+
+    const post = await this._postModel.findOne({
+      filter: { _id: postId, ...postAvailability(req) },
+    });
+
+    if (!post) {
+      throw new APPError("post not found");
+    }
+
     successResponse({ res, data: post });
   };
 
@@ -185,7 +201,7 @@ class PostService {
     let fcmTokens: string[] = [];
     if (tags?.length) {
       const mentionsTags = await this._userModel.find({
-        filter: { _id: { $in: tags } },
+        filter: { _id: { $in: tags }, paranoid: true },
       });
 
       if (tags.length !== mentionsTags.length) {
@@ -234,6 +250,54 @@ class PostService {
     }
 
     successResponse({ res, data: post });
+  };
+
+  deletePost = async (req: Request, res: Response, next: NextFunction) => {
+    const { postId } = req.params;
+
+    const deletedPost = await this._postModel.findOneAndUpdate({
+      filter: { _id: postId, ...postAvailability(req), paranoid: true },
+      updates: {
+        deletedAt: Date.now(),
+      },
+    });
+
+    if (!deletedPost) {
+      throw new APPError("post not found or not authorized");
+    }
+
+    const comments = await this._commentModel.find({
+      filter: { refId: postId!, onModel: On_Model_Enum.post, paranoid: true },
+    });
+
+    if (!comments.length) {
+      throw new APPError("no comments found");
+    }
+
+    const deletedCommentsAndReplies = await this._commentModel.updateMany({
+      filter: {
+        $or: [
+          { refId: postId!, onModel: On_Model_Enum.post },
+          {
+            refId: {
+              $in: comments.map((c) => {
+                return c._id;
+              }),
+            },
+            onModel: On_Model_Enum.comment,
+          },
+        ],
+      },
+      updates: {
+        deletedAt: Date.now(),
+      },
+    });
+
+    if (deletedCommentsAndReplies.modifiedCount == 0) {
+      throw new APPError("failed to delete post comments and replies");
+    }
+
+    successResponse({ res, data: "post deleted successfully" });
   };
 }
 

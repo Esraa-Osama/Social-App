@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import {
@@ -53,7 +53,7 @@ export const authentication = async (
     throw new APPError("you are not allowed, invalid token", 401);
   }
   const user = await userModel.findOne({
-    filter: { _id: new Types.ObjectId(decoded.id) },
+    filter: { _id: new Types.ObjectId(decoded.id), paranoid: true },
   });
   if (!user) {
     throw new APPError("user not found", 404);
@@ -76,4 +76,59 @@ export const authentication = async (
   req.user = user;
   req.decoded = decoded;
   next();
+};
+
+export const authenticationGQL = async (authorization: string) => {
+  if (!authorization) {
+    throw new APPError(
+      "token required, you must login to do this process",
+      401,
+    );
+  }
+
+  const [prefix, token]: string[] = authorization.split(" ");
+
+  if (!token) {
+    throw new APPError("token not found", 404);
+  }
+
+  let ACCESS_SECRET_KEY = "";
+  if (prefix == PREFIX_USER) {
+    ACCESS_SECRET_KEY = JWT_ACCESS_SECRET_KEY_USER;
+  } else if (prefix == PREFIX_ADMIN) {
+    ACCESS_SECRET_KEY = JWT_ACCESS_SECRET_KEY_ADMIN;
+  } else {
+    throw new APPError("invalid token prefix", 401);
+  }
+
+  const decoded = tokenService.verifyToken({
+    token: token,
+    secret_key: ACCESS_SECRET_KEY,
+  }) as JwtPayload;
+
+  if (!decoded || !decoded?.id) {
+    throw new APPError("you are not allowed, invalid token", 401);
+  }
+  const user = await userModel.findOne({
+    filter: { _id: new Types.ObjectId(decoded.id), paranoid: true },
+  });
+  if (!user) {
+    throw new APPError("user not found", 404);
+  }
+
+  if (
+    user?.changeCredential &&
+    user?.changeCredential.getTime() > decoded.iat! * 1000
+  ) {
+    throw new APPError("invalid token", 404);
+  }
+
+  let revokeToken = await redisService.get(
+    redisService.revokedKey({ userId: user._id, jti: decoded.jti! }),
+  );
+  if (revokeToken) {
+    throw new APPError("token is already revoked", 404);
+  }
+
+  return { user, decoded };
 };

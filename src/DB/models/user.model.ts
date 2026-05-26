@@ -1,11 +1,11 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import {
   GenderEnum,
   RoleEnum,
   ProviderEnum,
 } from "./../../common/enum/user.enum";
-import mongoose, { Types } from "mongoose";
+import mongoose, { Query, Types } from "mongoose";
 
 export interface IUser {
   firstName: string;
@@ -17,6 +17,7 @@ export interface IUser {
   phone?: string;
   address?: string;
   profilePicture?: string;
+  coverPictures?: string[];
   gender?: GenderEnum;
   role?: RoleEnum;
   confirmed?: Boolean;
@@ -25,6 +26,7 @@ export interface IUser {
   changeCredential?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+  deletedAt?: Date;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -76,7 +78,7 @@ const userSchema = new mongoose.Schema<IUser>(
       trim: true,
     },
     profilePicture: String,
-
+    coverPictures: [String],
     gender: {
       type: String,
       enum: GenderEnum,
@@ -99,6 +101,7 @@ const userSchema = new mongoose.Schema<IUser>(
       default: ProviderEnum.system,
     },
     changeCredential: Date,
+    deletedAt: Date,
   },
   {
     timestamps: true,
@@ -117,6 +120,24 @@ userSchema
   .set(function (value: string) {
     this.set({ firstName: value.split(" ")[0], lastName: value.split(" ")[1] });
   });
+
+userSchema.pre(/^find/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
+});
+
+userSchema.pre(/^findOneAnd/, async function (this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ deletedAt: { $exists: false }, ...rest });
+  }
+});
 
 const userModel =
   mongoose.models.user || mongoose.model<IUser>("user", userSchema);

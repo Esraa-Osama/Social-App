@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import * as z from "zod";
 import { GenderEnum } from "../../common/enum/user.enum";
@@ -144,3 +144,7 @@ export const resetPasswordSchema = {
     ),
 };
 export type IResetPasswordType = z.infer<typeof resetPasswordSchema.body>;
+
+export const getUserSchema = z.object({
+  token: z.string(),
+});

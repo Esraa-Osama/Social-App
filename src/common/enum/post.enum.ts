@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 export enum Allow_Comment_Enum {
   allow = "allow",
@@ -14,4 +14,9 @@ export enum Availability_Enum {
 export enum Like_Post_Enum {
   like = "like",
   disLike = "disLike",
+}
+
+export enum On_Model_Enum {
+  post = "post",
+  comment = "comment",
 }

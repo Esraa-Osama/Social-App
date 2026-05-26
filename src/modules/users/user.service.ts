@@ -1,17 +1,25 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import type { Request, Response, NextFunction } from "express";
-import { Types } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 import UserRepository from "../../DB/repositories/user.repository";
 import { applyHash, compareHash } from "../../common/security/hash.security";
-import { IUpdatePasswordType } from "./user.validation";
+import { IUpdatePasswordType, IUpdateProfileType } from "./user.validation";
 import { successResponse } from "../../common/utils/response.success";
 import { S3Service } from "../../common/services/s3.service";
-import { pipeline } from "node:stream/promises";
+import { IUser } from "../../DB/models/user.model";
+import { encrypt } from "../../common/security/encrypt.security";
+import redisService from "../../common/services/redis.service";
+import { APPError } from "../../common/utils/global-error-handler";
+import PostRepository from "../../DB/repositories/post.repository";
+import CommentRepository from "../../DB/repositories/comment.repository";
 
 class UserService {
   private readonly _userModel = new UserRepository();
+  private readonly _postModel = new PostRepository();
+  private readonly _commentModel = new CommentRepository();
   private readonly _s3Service = new S3Service();
+  private readonly _redisService = redisService;
 
   constructor() {}
 
@@ -21,18 +29,18 @@ class UserService {
     if (
       !compareHash({ plainText: oldPassword, hashedText: req.user!.password! })
     ) {
-      throw new Error("invalid old password");
+      throw new APPError("invalid old password");
     }
 
     const user = await this._userModel.findOneAndUpdate({
-      filter: { _id: new Types.ObjectId(req.user!._id) },
+      filter: { _id: new Types.ObjectId(req.user!._id), paranoid: true },
       updates: {
         password: applyHash({ plainText: newPassword }),
         changeCredential: new Date(),
       },
     });
     if (!user) {
-      throw new Error("user not found", { cause: 404 });
+      throw new APPError("user not found", 404);
     }
     successResponse({
       res,
@@ -47,34 +55,62 @@ class UserService {
     });
   };
 
+  updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+    let { userName, age, phone, address, gender }: IUpdateProfileType =
+      req.body;
+
+    const user: HydratedDocument<IUser> | null =
+      await this._userModel.findOneAndUpdate({
+        filter: {
+          _id: req.user?._id,
+          paranoid: true,
+        },
+        updates: {
+          userName: userName
+            ? userName
+            : `${req.user?.firstName} ${req.user?.lastName}`,
+          age: age ? age : req.user?.age,
+          phone: phone ? encrypt(phone) : req.user?.phone,
+          address: address ? address : req.user?.address,
+          gender: gender ? gender : req.user?.gender,
+        },
+      });
+
+    if (!user) {
+      throw new APPError("failed to update profile");
+    }
+
+    successResponse({
+      res,
+      status: 201,
+      message: "profile updated successfully",
+    });
+  };
+
   updateProfilePicture = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ) => {
-    const key = await this._s3Service.uploadFile({
+    const key = this._s3Service.uploadFile({
       file: req.file!,
-      path: "users",
+      path: `users/${req.user?._id}/profile`,
     });
-    successResponse({
-      res,
-      data: key,
-    });
-  };
 
-  updateBigProfilePicture = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
-    const key = await this._s3Service.uploadLargeFile({
-      file: req.file!,
-      path: "users/large",
+    const profilePicture = await this._userModel.findOneAndUpdate({
+      filter: {
+        _id: req.user?._id,
+        paranoid: true,
+      },
+      updates: {
+        profilePicture: key,
+      },
     });
-    successResponse({
-      res,
-      data: key,
-    });
+
+    if (!profilePicture) {
+      throw new APPError("failed to update profile picture");
+    }
+    successResponse({ res, message: "profile picture updated successfully" });
   };
 
   updateCoverPictures = async (
@@ -82,102 +118,65 @@ class UserService {
     res: Response,
     next: NextFunction,
   ) => {
-    const urls = await this._s3Service.uploadFiles({
+    const urls = this._s3Service.uploadFiles({
       files: req.files as Express.Multer.File[],
-      path: "user/covers",
-    });
-    successResponse({
-      res,
-      data: urls,
-    });
-  };
-
-  upload = async (req: Request, res: Response, next: NextFunction) => {
-    const { fileName, ContentType } = req.body;
-    const { url, Key } = await this._s3Service.createPreSignedUrl({
-      path: `users/${req.user?._id}`,
-      fileName,
-      ContentType,
+      path: `users/${req.user?._id}/cover`,
     });
 
-    await this._userModel.findOneAndUpdate({
-      filter: { _id: req.user?._id },
-      updates: { profilePicture: Key },
+    const coverPictures = await this._userModel.findOneAndUpdate({
+      filter: {
+        _id: req.user?._id,
+        paranoid: true,
+      },
+      updates: {
+        coverPictures: urls,
+      },
     });
 
-    successResponse({
-      res,
-      data: { Key, url },
-    });
-  };
-
-  getAndDownloadProfilePicture = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
-    const { path } = req.params as { path: string[] };
-    const { download } = req.query;
-
-    const Key = path.join("/");
-    const result = await this._s3Service.getFile(Key);
-    const stream = result.Body as NodeJS.ReadableStream;
-    res.setHeader("Content-Type", result.ContentType!);
-    if (download && download === "true") {
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${path.pop()}"`,
-      );
+    if (!coverPictures) {
+      throw new APPError("failed to update cover pictures");
     }
-    await pipeline(stream, res);
+    successResponse({ res, message: "cover pictures updated successfully" });
   };
 
-  getProfilePicture = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
-    const { path } = req.params as { path: string[] };
-    const { download } = req.query as { download: string };
-    const Key = path.join("/");
-    const url = await this._s3Service.getPreSignedUrl({
-      Key,
-      download: download ? download : undefined,
+  deleteAccount = async (req: Request, res: Response, next: NextFunction) => {
+    const deleteUser = await this._userModel.findOneAndUpdate({
+      filter: {
+        _id: req.user?._id,
+        paranoid: true,
+      },
+      updates: {
+        deletedAt: Date.now(),
+      },
     });
-    successResponse({ res, data: url });
-  };
 
-  getFiles = async (req: Request, res: Response, next: NextFunction) => {
-    const { path } = req.query as { path: string };
-    const { Contents } = await this._s3Service.getFiles(path);
-
-    const urls = [];
-    for (const content of Contents!) {
-      urls.push({ Key: content.Key });
+    if (!deleteUser) {
+      throw new APPError("failed to delete account");
     }
-    successResponse({ res, data: urls });
-  };
 
-  deleteFile = async (req: Request, res: Response, next: NextFunction) => {
-    const { Key } = req.query as { Key: string };
-    const result = await this._s3Service.deleteFile(Key);
+    const deletePosts = await this._postModel.updateMany({
+      filter: { createdBy: req.user?._id! },
+      updates: {
+        deletedAt: Date.now(),
+      },
+    });
 
-    successResponse({ res, data: result });
-  };
+    if (!deletePosts) {
+      throw new APPError("failed to delete user posts");
+    }
 
-  deleteFiles = async (req: Request, res: Response, next: NextFunction) => {
-    const { Keys } = req.body as { Keys: string[] };
-    const result = await this._s3Service.deleteFiles(Keys);
+    const deleteCommentsAndReplies = await this._commentModel.updateMany({
+      filter: { createdBy: req.user?._id! },
+      updates: {
+        deletedAt: Date.now(),
+      },
+    });
 
-    successResponse({ res, data: result });
-  };
+    if (!deleteCommentsAndReplies) {
+      throw new APPError("failed to delete user comments and replies");
+    }
 
-  deleteFolder = async (req: Request, res: Response, next: NextFunction) => {
-    const { folderName } = req.query as { folderName: string };
-    const result = await this._s3Service.deleteFolder(folderName);
-
-    successResponse({ res, data: result });
+    successResponse({ res, message: "account deleted successfully" });
   };
 }
 

@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 import { JwtPayload } from "jsonwebtoken";
 import { IUser } from "../../DB/models/user.model";

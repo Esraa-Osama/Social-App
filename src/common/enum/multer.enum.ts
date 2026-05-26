@@ -1,4 +1,4 @@
-//~ Assignment 19 ~//
+//~ Assignment 20 ~//
 
 export const MulterEnum = {
   image: ["image/png", "image/jpg", "image/jpeg"],
