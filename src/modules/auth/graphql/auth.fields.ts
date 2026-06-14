@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import { authorizationGQL } from "./../../../common/middleware/authorization.middleware";
 import {
@@ -13,7 +13,7 @@ import {
 } from "graphql";
 import { APPError } from "../../../common/utils/global-error-handler";
 import { GenderType, UserType } from "./auth.type";
-import { createUserArgs, getUserArgs } from "./auth.args";
+import { getUserArgs } from "./auth.args";
 import authService from "../auth.service";
 import { authenticationGQL } from "../../../common/middleware/authentication.middleware";
 import { RoleEnum } from "../../../common/enum/user.enum";

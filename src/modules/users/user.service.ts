@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import type { Request, Response, NextFunction } from "express";
 import { HydratedDocument, Types } from "mongoose";
@@ -13,6 +13,7 @@ import redisService from "../../common/services/redis.service";
 import { APPError } from "../../common/utils/global-error-handler";
 import PostRepository from "../../DB/repositories/post.repository";
 import CommentRepository from "../../DB/repositories/comment.repository";
+import { pipeline } from "node:stream/promises";
 
 class UserService {
   private readonly _userModel = new UserRepository();
@@ -49,10 +50,36 @@ class UserService {
   };
 
   getProfile = async (req: Request, res: Response, next: NextFunction) => {
+    const user = await this._userModel.findOne({
+      filter: { _id: req.user?._id as Types.ObjectId },
+      options: { populate: { path: "friends" } },
+    });
     successResponse({
       res,
-      data: { user: req.user },
+      data: { user },
     });
+  };
+
+  getAndDownloadProfilePicture = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { path } = req.params as { path: string[] };
+    const { download } = req.query;
+
+    const Key = path.join("/");
+    const result = await this._s3Service.getFile(Key);
+    const stream = result.Body as NodeJS.ReadableStream;
+    res.setHeader("Content-Type", result.ContentType!);
+    if (download && download === "true") {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${path.pop()}"`,
+      );
+    }
+    await pipeline(stream, res);
   };
 
   updateProfile = async (req: Request, res: Response, next: NextFunction) => {

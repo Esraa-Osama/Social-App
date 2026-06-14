@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
@@ -18,6 +18,9 @@ import redisService from "./common/services/redis.service";
 import postRouter from "./modules/posts/post.controller";
 import { graphQLSchema } from "./modules/graphql/graphql.schema";
 import { createHandler } from "graphql-http/lib/use/express";
+import { Server } from "socket.io";
+import { decodeTokenAndFetchUser } from "./common/middleware/authentication.middleware";
+import socketGateway from "./modules/realtime/socket.gateway";
 
 const app: express.Application = express();
 const port: number = PORT;
@@ -82,9 +85,10 @@ const bootstrap = async () => {
 
   app.use(globalErrorHandler);
 
-  app.listen(port, () => {
+  const httpServer = app.listen(port, () => {
     console.log(`server is running on port ${port}`);
   });
-};
 
+  await socketGateway.initIo(httpServer);
+};
 export default bootstrap;

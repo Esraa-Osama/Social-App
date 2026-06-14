@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import BaseRepository from "./base.repository";
 import postModel, { IPost } from "../models/post.model";

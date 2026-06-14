@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import { createClient, RedisClientType } from "redis";
 import { REDIS_URL } from "../../config/config.service";
@@ -189,6 +189,42 @@ class RedisService {
 
   async removeFCMUser(userId: Types.ObjectId) {
     return await this.client.del(this.key(userId));
+  }
+
+  SocketKey(userId: Types.ObjectId) {
+    return `user:Socket:${userId}`;
+  }
+
+  async addSocket({
+    userId,
+    socketId,
+  }: {
+    userId: Types.ObjectId;
+    socketId: string;
+  }) {
+    return await this.client.sAdd(this.SocketKey(userId), socketId);
+  }
+
+  async removeSocket({
+    userId,
+    socketId,
+  }: {
+    userId: Types.ObjectId;
+    socketId: string;
+  }) {
+    return await this.client.sRem(this.SocketKey(userId), socketId);
+  }
+
+  async getSockets(userId: Types.ObjectId) {
+    return await this.client.sMembers(this.SocketKey(userId));
+  }
+
+  async hasSockets(userId: Types.ObjectId) {
+    return await this.client.sCard(this.SocketKey(userId));
+  }
+
+  async removeSocketUser(userId: Types.ObjectId) {
+    return await this.client.del(this.SocketKey(userId));
   }
 }
 export default new RedisService();

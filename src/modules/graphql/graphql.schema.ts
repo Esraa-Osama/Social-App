@@ -1,4 +1,4 @@
-//~ Assignment 20 ~//
+//~ Assignment 21 ~//
 
 import { GraphQLObjectType, GraphQLSchema } from "graphql";
 import authFields from "../auth/graphql/auth.fields";

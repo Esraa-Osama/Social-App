@@ -1,3 +1,5 @@
+//~ Assignment 21 ~//
+
 import { GraphQLInt, GraphQLNonNull, GraphQLString } from "graphql";
 import { GenderType } from "./auth.type";
 

@@ -2,3 +2,5 @@
 /.env.*
 /dist
 *-firebase-adminsdk-*.json
+/.vscode
+/FE
